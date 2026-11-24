@@ -1,900 +1,383 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# LibraryHub Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+LibraryHub is a library-management API for the member portal and staff console. It manages books and physical copies, catalog search, members, authentication, circulation, reservations, fines, payments, reports, settings, and audit history.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The backend is an ESM NestJS application. It serves the API under `/api` and stores application data in MongoDB.
 
-## Description
+## What the backend uses
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Area | Technology | Purpose |
+| --- | --- | --- |
+| HTTP framework | NestJS 12 | Modules, controllers, dependency injection, guards, pipes, and filters |
+| Runtime | Node.js with native ESM | Runs TypeScript output with `.js` import extensions |
+| Database | MongoDB | Document storage for users, books, copies, loans, reservations, fines, payments, settings, and audit logs |
+| ODM | Mongoose 9 with `@nestjs/mongoose` | Schemas, indexes, validation, queries, population, and database connection management |
+| Authentication | Passport JWT and `@nestjs/jwt` | Short-lived access tokens and refresh-token sessions |
+| Password security | `bcryptjs` | Password hashing and verification |
+| Validation | `class-validator`, `class-transformer` | DTO validation, transformation, whitelisting, and rejection of unknown fields |
+| File import/export | ExcelJS | Member workbook import and circulation CSV/XLSX-related workflows |
+| Testing | Vitest, Supertest, Nest testing utilities | Unit and HTTP integration tests |
+| Code quality | Prettier and Oxlint | Formatting and linting |
 
-## Project setup
+The current implementation uses application-managed JWT authentication and bcrypt password hashing. External identity providers such as FusionAuth, WorkOS, LoginRadius, and Snyk are not runtime dependencies of this backend; they should not be treated as configured integrations unless they are added to the code and environment configuration.
 
-```bash
-$ npm install
+## Project structure
+
+```text
+src/
+├── auth/         Login, registration, JWT guards, roles, refresh and logout
+├── catalog/      Books, categories, physical copies, public catalog and admin catalog
+├── circulation/  Borrowing, issuing, returns, renewals, reservations and scheduler
+├── common/       Filters, security helpers, notifications and shared infrastructure
+├── configs/      Environment, CORS, validation and MongoDB configuration
+├── database/     Mongoose connection module
+├── enums/        Shared roles, membership types and statuses
+├── operations/   Member/admin dashboards, reports and audit logs
+├── payments/     Fines, demo payments, cash collection and receipts
+├── settings/     Library circulation policy
+└── user/         User management and member profile endpoints
 ```
 
-## Compile and run the project
+Each feature is organized into NestJS modules with controllers, services, repositories, DTOs, and Mongoose entities. Controllers handle HTTP concerns, services apply business rules, and repositories perform database operations.
+
+## Local setup
+
+Requirements:
+
+- Node.js compatible with the project TypeScript and NestJS versions
+- MongoDB running locally or a reachable MongoDB deployment
+- npm
+
+Install dependencies and start the API:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-
-The production build entry point is `dist/main.js`.
+npm install
+npm run start:dev
 ```
 
-## Run tests
+The development server listens on `http://localhost:3000` and the API base URL is:
+
+```text
+http://localhost:3000/api
+```
+
+Production build and start:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run build
+npm run start:prod
 ```
 
-## Authentication
+## Environment configuration
 
-Set distinct, high-entropy values for `JWT_ACCESS_SECRET` and
-`JWT_REFRESH_SECRET`. `JWT_ACCESS_EXPIRES` and `JWT_REFRESH_EXPIRES` are
-optional and default to `15m` and `7d`. Set `ADMIN_EMAIL` and
-`ADMIN_PASSWORD` to enable the environment-provisioned admin account.
+Create a `.env` file in the backend root. Never commit real secrets.
 
-- `POST /api/auth/register` and `POST /api/auth/register/member` create a member
-  account.
-- `POST /api/auth/login` authenticates an active account; the returned role
-  determines which portal the client should open. `POST /api/auth` remains an
-  alias.
-- `POST /api/auth/admin/login` authenticates admin and librarian accounts.
-  Configured `ADMIN_EMAIL` and `ADMIN_PASSWORD` credentials provision the
-  initial admin account on first login.
-- `POST /api/auth/admin/create` creates an additional admin and requires an
-  admin access token. Staff creation returns the account only; the new staff
-  member signs in with their own credentials.
-- `POST /api/auth/register/librarian` (also available at
-  `/api/auth/admin/create/librarian`) creates a librarian and requires an admin
-  access token.
-- `POST /api/auth/refresh` accepts `{ "refreshToken": "..." }` and rotates the
-  refresh token.
-- `POST /api/auth/logout` requires an access token and revokes the active
-  refresh token.
-- Five consecutive incorrect passwords lock an account for 15 minutes.
-- `GET /api/me`, `PATCH /api/me`, and `POST /api/me/change-password` require an
-  access token and operate only on the signed-in account.
+| Variable | Description | Example |
+| --- | --- | --- |
+| `NODE_ENV` | Runtime environment | `development` |
+| `PORT` | HTTP port | `3000` |
+| `MONGO_URI` | MongoDB connection string | `mongodb://127.0.0.1:27017/libraryhub` |
+| `CORS_ORIGIN` | Frontend origin used by the deployment | `http://localhost:5173` |
+| `JWT_ACCESS_SECRET` | Secret used to sign access tokens | long random value |
+| `JWT_REFRESH_SECRET` | Secret used to sign refresh tokens | different long random value |
+| `JWT_ACCESS_EXPIRES` | Access-token lifetime | `15m` |
+| `JWT_REFRESH_EXPIRES` | Refresh-token lifetime | `7d` |
+| `COOKIE_SAMESITE` | Cookie SameSite policy | `strict` |
+| `ADMIN_EMAIL` | Optional first-admin bootstrap account | `admin@example.com` |
+| `ADMIN_PASSWORD` | Password for the bootstrap admin | strong secret |
+| `LIBRARIAN_EMAIL` | Optional first-librarian bootstrap account | `librarian@example.com` |
+| `LIBRARIAN_PASSWORD` | Password for the bootstrap librarian | strong secret |
 
-Passwords must be between eight and 72 characters. The server assigns account
-roles; public member signup cannot choose a role or submit token fields.
+On startup, configured admin and librarian accounts are provisioned only when the corresponding staff account does not already exist. Use strong, unique secrets outside local development.
 
-To create an additional admin, send an admin access token and account details:
+## Application lifecycle
+
+`src/main.ts` creates the Nest application and configures:
+
+1. The global `/api` prefix.
+2. CORS with credentials support.
+3. A global `ValidationPipe` with transformation, whitelist filtering, and rejection of non-whitelisted request fields.
+4. Global HTTP and application exception filters for consistent error responses.
+5. The request logging middleware.
+6. The MongoDB connection and feature modules.
+
+## Roles and access
+
+The role enum contains:
+
+- `member`: member portal access, catalog browsing, borrowing, reservations, loans, fines, payments, and profile management.
+- `librarian`: staff console access to circulation and operational workflows.
+- `admin`: all staff features plus user management, settings, waivers, audit logs, and administrative controls.
+
+Authentication is applied with `AuthGuard`. `RolesGuard` and the `@Roles()` decorator restrict staff and admin endpoints. A member token cannot access staff-only routes.
+
+## Main workflows
+
+### Member workflow
+
+1. A member registers and selects `student`, `faculty`, or `public` membership.
+2. The member signs in and receives access and refresh tokens.
+3. The catalog can be searched by title, author, ISBN, category slug, and availability.
+4. If a physical copy is available, the member borrows it; otherwise, the member creates a reservation.
+5. A librarian issues the requested copy at the desk unless self-checkout is enabled.
+6. The member can view active loans, renew eligible loans, or request a return.
+7. The librarian completes the physical return. Late, damaged, or lost copies can create fines.
+8. The member can view fine history and record a demo payment. Demo payments do not charge money.
+
+### Staff workflow
+
+1. Staff sign in through the admin login endpoint.
+2. The dashboard loads circulation totals, overdue loans, and recent activity.
+3. Staff look up a member and a book copy before issuing a book.
+4. The API validates account status, active-loan limits, unpaid-fine limits, copy availability, and reservation state.
+5. Issue and return operations update the loan, copy, book availability, member statistics, reservations, and fines.
+6. Staff manage reservation queues and can notify or cancel reservations.
+7. Staff collect cash fines, while admins can waive eligible fines.
+8. Admins can create staff accounts, update library policy, inspect reports, and review audit logs.
+
+### Circulation rules
+
+The default policy is stored in the library settings collection and can be changed by an admin:
+
+- Default loan days: 14 for students and public members; 30 for faculty.
+- Default maximum renewals: 2.
+- Default renewal extension: 7 days.
+- Default overdue fine: ₹5 per day.
+- Fine, loan, renewal, reservation-hold, and unpaid-balance limits are policy-driven.
+- Suspended members, members over their active-loan limit, and members over the unpaid-fine limit cannot borrow.
+- A scheduler periodically marks overdue loans and processes expired reservation holds.
+
+## API reference
+
+All paths below are relative to `/api`. Protected endpoints require:
 
 ```http
-POST /api/auth/admin/create
-Authorization: Bearer <admin-access-token>
-Content-Type: application/json
-
-{
-  "name": "Library Admin",
-  "email": "new-admin@example.com",
-  "password": "replace-with-a-strong-password"
-}
+Authorization: Bearer <access-token>
 ```
 
-Use the same request shape at `/api/auth/admin/create/librarian` to create a
-librarian. The initial admin is provisioned from `ADMIN_EMAIL` and
-`ADMIN_PASSWORD` the first time `/api/auth/admin/login` succeeds.
+### Authentication
 
-## MongoDB access
+| Method | Endpoint | Access | Description |
+| --- | --- | --- | --- |
+| `POST` | `/auth/register` | Public | Register a member |
+| `POST` | `/auth/register/member` | Public | Register a member alias |
+| `POST` | `/auth/login` | Public | Member login |
+| `POST` | `/auth` | Public | Login alias |
+| `POST` | `/auth/admin/login` | Public | Staff login |
+| `POST` | `/auth/refresh` | Public | Rotate/refresh an access token |
+| `POST` | `/auth/logout` | Authenticated | Revoke the current session |
+| `POST` | `/auth/register/librarian` | Admin | Create a librarian through the auth workflow |
+| `POST` | `/auth/admin/create/librarian` | Admin | Librarian creation alias |
+| `POST` | `/auth/admin/create` | Admin | Create an admin account |
 
-MongoDB queries are kept in repositories such as
-`src/user/user.repository.ts` and `src/catalog/catalog.repository.ts`.
-Services contain account and catalog rules and depend on repositories instead
-of accessing Mongoose models directly.
+### Member profile and dashboard
 
-## Circulation
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/me` | Get the authenticated member profile |
+| `PATCH` | `/me` | Update member profile and notification preferences |
+| `POST` | `/me/change-password` | Change the authenticated user password |
+| `GET` | `/me/dashboard` | Dashboard counters, current loans, and new arrivals |
 
-The circulation module provides member borrow requests, loans and renewals,
-desk issue/return/lost handling, and reservation queues. Admin endpoints are
-restricted to librarians and admins; member circulation endpoints require a
-member account. Loan, copy, stock-counter, reservation, and return-fine changes
-are committed together in MongoDB transactions.
+### Public catalog
 
-MongoDB must run as a replica set or sharded cluster to support those
-transactions. On first access, `SELF_CHECKOUT=true` initializes the persistent
-library setting for immediate member checkout; otherwise borrowing creates a
-pending request for desk confirmation. Admins can update this and other
-circulation policies at `GET/PATCH /api/admin/settings`. A scheduler checks
-overdue loans and expired reservation holds every minute; reservation
-expiration and queue promotion run transactionally.
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/books` | Search, paginate, and filter public books |
+| `GET` | `/books/new-arrivals` | Get recently added active books |
+| `GET` | `/books/:id` | Get a book detail and availability |
+| `GET` | `/categories` | List category options and slugs |
 
-## Fines and payments
+Common `/books` query parameters include `q`, `category`, `availability`, `page`, and `limit`. Category filters accept the category slug used by the frontend, such as `computer-science`.
 
-The member API lists fines, records demonstration payments, lists payment
-history, and serves paid receipts as PDFs. Clicking the demo payment action
-immediately records the selected fines as paid in a MongoDB transaction. It is
-for display/testing only: no payment gateway is used and no money is charged.
-Librarians/admins can create manual fines and collect cash; only admins can
-waive fines.
+### Member circulation
 
-Operations endpoints provide member/admin dashboards, reports, CSV export and
-admin-only audit history. Member catalog, circulation, account and payment
-screens and the admin catalog, member, circulation, fine, settings and report
-screens use the backend APIs. Email verification and password recovery are
-intentionally excluded; signed-in users can change their password after
-confirming their current password.
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/me/loans?status=active` | Active, pending, issued, and overdue loans |
+| `GET` | `/me/loans?status=history` | Returned and lost loan history, including populated fines |
+| `GET` | `/me/reservations` | Member reservation records |
+| `POST` | `/books/:id/borrow` | Borrow or request a book |
+| `POST` | `/books/:id/reserve` | Join a reservation queue |
+| `POST` | `/loans/:id/renew` | Renew an eligible loan |
+| `POST` | `/loans/:id/return-request` | Request a return |
+| `DELETE` | `/reservations/:id` | Cancel a member reservation |
 
-The measurement-led performance backlog is documented in
-[`performance-optimization-plan.md`](./performance-optimization-plan.md).
+### Member fines and payments
 
-## Deployment
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/me/fines` | Fine items and total outstanding balance |
+| `POST` | `/payments/demo` | Record a non-monetary demo payment for selected fines |
+| `GET` | `/me/payments` | Member payment history |
+| `GET` | `/payments/:id/receipt` | Get a paid payment receipt |
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Amounts are stored as integer paise. For example, `10000` represents ₹100.00.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Admin catalog and categories
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/admin/books` | Admin book listing with filters and pagination |
+| `POST` | `/admin/books` | Create a book and its physical copies |
+| `GET` | `/admin/books/:id` | Get an admin book detail |
+| `PATCH` | `/admin/books/:id` | Update book metadata |
+| `DELETE` | `/admin/books/:id` | Archive a book when circulation rules allow |
+| `POST` | `/admin/books/:id/copies` | Add physical copies |
+| `PATCH` | `/admin/copies/:copyId` | Update a copy |
+| `POST` | `/admin/categories` | Create a category |
+| `PATCH` | `/admin/categories/:id` | Update a category |
+| `DELETE` | `/admin/categories/:id` | Delete a category when allowed |
+| `GET` | `/admin/books/import-template` | Download the book import template |
+| `POST` | `/admin/books/import` | Import books from an `.xlsx` file |
+| `GET` | `/admin/categories/import-template` | Download the category import template |
+| `POST` | `/admin/categories/import` | Import categories from an `.xlsx` file |
+
+### Admin users and members
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/user` | List users for admin management |
+| `POST` | `/user` | Create a staff account with a selected role |
+| `POST` | `/user/create/member` | Create a member account |
+| `GET` | `/user/:id` | Get a user |
+| `PATCH` | `/user/:id` | Update user details or status |
+| `DELETE` | `/user/:id` | Remove a user when allowed |
+| `GET` | `/user/members/import-template` | Download the member import template |
+| `POST` | `/user/members/import` | Import members from an `.xlsx` file |
+
+### Admin circulation and reservations
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/admin/lookup/member?q=...` | Look up a member and borrowing eligibility |
+| `GET` | `/admin/lookup/members?q=...` | Search member suggestions |
+| `GET` | `/admin/lookup/books?q=...` | Search book/copy suggestions |
+| `GET` | `/admin/lookup/copy?barcode=...` | Look up a physical copy and its current loan |
+| `POST` | `/admin/loans/issue` | Issue a copy to a member |
+| `POST` | `/admin/loans/return` | Return a copy and create applicable fines |
+| `POST` | `/admin/loans/:id/renew` | Renew a loan as staff |
+| `POST` | `/admin/loans/:id/mark-lost` | Mark a loan/copy lost |
+| `GET` | `/admin/loans` | Admin loan listing with filters |
+| `GET` | `/admin/loans/overdue` | Overdue loan listing |
+| `GET` | `/admin/reservations` | Reservation queue listing |
+| `POST` | `/admin/reservations/:id/notify` | Notify a ready reservation |
+| `DELETE` | `/admin/reservations/:id` | Cancel an admin reservation |
+
+### Admin fines and payments
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/admin/fines` | List fines with status, member, date, and pagination filters |
+| `POST` | `/admin/fines` | Create a manual fine |
+| `POST` | `/admin/fines/:id/pay` | Record a cash payment |
+| `POST` | `/admin/fines/:id/waive` | Waive a payable fine; admin-only policy applies |
+| `GET` | `/admin/payments` | List payments for staff reporting |
+
+### Dashboards, reports, settings, and audit history
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/admin/dashboard` | Admin dashboard statistics and recent activity |
+| `GET` | `/admin/reports/circulation?range=week\|month` | Circulation chart data |
+| `GET` | `/admin/reports/most-borrowed` | Most-borrowed books |
+| `GET` | `/admin/reports/overdue` | Overdue report |
+| `GET` | `/admin/reports/fines` | Fine and payment totals |
+| `GET` | `/admin/reports/members` | Member trend report |
+| `GET` | `/admin/reports/categories` | Category distribution |
+| `GET` | `/admin/reports/export` | Export circulation data |
+| `GET` | `/admin/audit-logs` | Admin-only audit history |
+| `GET` | `/admin/settings` | Read circulation policy |
+| `PATCH` | `/admin/settings` | Update circulation policy |
+
+## Data model
+
+The main MongoDB collections are:
+
+- `users`: identity, role, membership type, status, statistics, password/session state, and notification preferences.
+- `books`: title-level metadata, category, copy totals, availability, rating, and borrow count.
+- `bookcopies`: physical copy barcode and circulation status.
+- `loans`: member, book, copy, immutable snapshots, due dates, renewals, return state, and fine reference.
+- `reservations`: member/book queue entries, waiting/ready/fulfilled/cancelled/expired status, hold dates, and fulfilled loan.
+- `fines`: paise amount, paid amount, status, reason, late days, snapshot, and audit timestamps.
+- `payments`: member, allocations, amount, method, receipt, idempotency key, and payment status.
+- `notifications`: member-facing alerts for fines, payments, due dates, and reservations.
+- `librarysettings`: configurable loan, renewal, fine, borrowing-limit, and reservation policy.
+- `auditlogs`: successful administrative changes and their actor/resource metadata.
+
+Snapshots on loans and fines preserve the member and book labels that existed when the event occurred. This keeps historical screens useful even if a user or book is later renamed.
+
+## Optimization and reliability techniques
+
+The backend applies the following techniques:
+
+### Database efficiency
+
+- Mongoose indexes support common lookups on member/status, status/due date, book/category, reservation queues, and unique active-copy constraints.
+- Member and category filters normalize identifiers before querying, including ObjectId conversion for relationship fields.
+- Read endpoints use `.lean()` where hydrated documents are not required.
+- Queries select only fields needed by each screen instead of returning full documents.
+- List endpoints paginate and cap page sizes to avoid unbounded responses.
+- Related fine data is populated only for loan-history views that need it.
+
+### Concurrent work
+
+- Independent dashboard counts and report queries run with `Promise.all`.
+- Aggregation pipelines calculate totals in MongoDB rather than loading every record into Node.js.
+- Report data is grouped by date/category in the database where possible.
+
+### Consistency and concurrency protection
+
+- Issue, return, renewal, payment, and reservation operations validate the current document state before updating it.
+- Conditional updates use the previous status or paid amount to detect changes made by another request.
+- Demo payments require an idempotency key so retrying the same request does not create duplicate payments.
+- Partial unique indexes prevent more than one active reservation for the same member and book.
+- Physical-copy indexes prevent multiple simultaneous active loans for the same copy.
+
+### Security and validation
+
+- Passwords are hashed with bcrypt and are never returned by user queries.
+- Access and refresh tokens use separate secrets and lifetimes.
+- Role guards separate member, librarian, and admin privileges.
+- DTO validation rejects unknown properties and transforms query values into the expected types.
+- CORS is explicitly configured for approved frontend origins and credentials.
+- File uploads are limited to `.xlsx` and a 5 MB maximum for member imports.
+- Exception filters normalize validation and application errors without exposing sensitive internals.
+
+### Operational behavior
+
+- MongoDB connection pooling uses bounded pool sizes and fail-fast server selection timeouts.
+- Development can build indexes automatically; production should manage indexes deliberately during deployment.
+- The circulation scheduler updates overdue loans and reservation expirations periodically.
+- Audit logs provide traceability for successful administrative changes.
+
+## Testing and quality commands
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run build       # Compile the NestJS backend
+npm run lint        # Run Oxlint
+npm test            # Run Vitest tests
+npm run test:cov    # Run tests with coverage
+npm run test:e2e    # Run HTTP integration tests
+npm run format      # Format source and test files
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
+Before committing a backend change, run at least:
 
 ```bash
-$ npx @nestjs/observe link
+npm run build
+npm test
 ```
 
-It installs `@nestjs/observe`, wires it into `AppModule` and `main.ts`, and writes the app key and secret into `.env`, which every `nest start` script (`start`, `start:dev`, `start:debug`) then loads. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
-
-Or do it by hand:
-
-```bash
-$ npm install @nestjs/observe
-```
-
-Then follow the [setup guide](https://docs.nestjs.com/observability/sdk) - it takes a single import and an app key.
-
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-
-
-# MongoDB
-
-Source: https://docs.nestjs.com/data/mongodb
-
-Nest supports two methods for integrating with the [MongoDB](https://www.mongodb.com/) database. You can either use the [TypeORM](https://github.com/typeorm/typeorm) module described in the [TypeORM chapter](/data/typeorm), which has a connector for MongoDB, or use [Mongoose](https://mongoosejs.com), the most popular MongoDB object modeling tool. This chapter describes the latter, using the dedicated `@nestjs/mongoose` package.
-
-Start by installing the required dependencies:
-
-```bash
-$ npm i @nestjs/mongoose mongoose
-```
-
-Once the installation process is complete, import the `MongooseModule` into the root `AppModule`:
-
-```typescript
-
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-
-@Module({
-  imports: [MongooseModule.forRoot('mongodb://localhost/nest')],
-})
-export class AppModule {}
-```
-
-The `forRoot()` method accepts the same configuration object as `mongoose.connect()` from the Mongoose package, as described in the [Mongoose connections guide](https://mongoosejs.com/docs/connections.html).
-
-#### Model injection
-
-With Mongoose, everything is derived from a [Schema](https://mongoosejs.com/docs/guide.html). Each schema maps to a MongoDB collection and defines the shape of the documents within that collection. Schemas are used to define [Models](https://mongoosejs.com/docs/models.html). Models are responsible for creating and reading documents from the underlying MongoDB database.
-
-You can create schemas with NestJS decorators, or manually with Mongoose itself. Using decorators to create schemas greatly reduces boilerplate and improves overall code readability.
-
-Let's define the `CatSchema`:
-
-```typescript
-
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
-
-export type CatDocument = HydratedDocument<Cat>;
-
-@Schema()
-export class Cat {
-  @Prop()
-  name: string;
-
-  @Prop()
-  age: number;
-
-  @Prop()
-  breed: string;
-}
-
-export const CatSchema = SchemaFactory.createForClass(Cat);
-```
-
-> info **Hint** You can also generate a raw schema definition using the `DefinitionsFactory` class (from the `@nestjs/mongoose` package). This allows you to manually modify the schema definition generated from the metadata you provided, which is useful for edge cases where it may be hard to represent everything with decorators.
-
-The `@Schema()` decorator marks a class as a schema definition. It maps the `Cat` class to a MongoDB collection of the same name, but with an additional "s" at the end, so the final collection name is `cats`. This decorator accepts a single optional argument, a schema options object. Think of it as the object you would normally pass as the second argument of the `mongoose.Schema` class constructor (e.g., `new mongoose.Schema(_, options)`). To learn more about the available schema options, see the [Mongoose schema options](https://mongoosejs.com/docs/guide.html#options) documentation.
-
-The `@Prop()` decorator defines a property in the document. For example, the schema definition above defines three properties: `name`, `age`, and `breed`. The [schema types](https://mongoosejs.com/docs/schematypes.html) for these properties are automatically inferred thanks to TypeScript metadata (and reflection) capabilities. However, in more complex scenarios in which types cannot be implicitly reflected (for example, arrays or nested object structures), you must indicate the types explicitly, as follows:
-
-```typescript
-@Prop([String])
-tags: string[];
-```
-
-Alternatively, the `@Prop()` decorator accepts an options object argument (read more about the [available schema type options](https://mongoosejs.com/docs/schematypes.html#schematype-options)). With it, you can indicate whether a property is required, specify a default value, or mark it as immutable. For example:
-
-```typescript
-@Prop({ required: true })
-name: string;
-```
-
-To specify a relation to another model (for populating later), use the `@Prop()` decorator as well. For example, if `Cat` has an `Owner` that is stored in a different collection called `owners`, the property should have `type` and `ref` options:
-
-```typescript
-import mongoose from 'mongoose';
-import { Owner } from '../owners/schemas/owner.schema.js';
-
-// inside the class definition
-@Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Owner' })
-owner: Owner;
-```
-
-If there are multiple owners, your property configuration should look as follows:
-
-```typescript
-@Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Owner' }] })
-owners: Owner[];
-```
-
-If you don't intend to always populate a reference to another collection, consider using `mongoose.Types.ObjectId` as the type instead:
-
-```typescript
-@Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Owner' })
-// This ensures the field is not confused with a populated reference
-owner: mongoose.Types.ObjectId;
-```
-
-Then, when you need to selectively populate it later, use a repository function that specifies the correct type:
-
-```typescript
-import { Owner } from './schemas/owner.schema.js';
-
-// e.g. inside a service or repository
-async findAllPopulated() {
-  return this.catModel.find().populate<{ owner: Owner }>("owner");
-}
-```
-
-> info **Hint** If there is no foreign document to populate, the type could be `Owner | null`, depending on your [Mongoose configuration](https://mongoosejs.com/docs/populate.html#doc-not-found). Alternatively, it might throw an error, in which case the type is `Owner`.
-
-Finally, you can also pass a **raw** schema definition to the decorator. This is useful when, for example, a property represents a nested object that is not defined as a class. For this, use the `raw()` function from the `@nestjs/mongoose` package, as follows:
-
-```typescript
-@Prop(raw({
-  firstName: { type: String },
-  lastName: { type: String }
-}))
-details: Record<string, any>;
-```
-
-Alternatively, if you prefer **not using decorators**, you can define a schema manually. For example:
-
-```typescript
-export const CatSchema = new mongoose.Schema({
-  name: String,
-  age: Number,
-  breed: String,
-});
-```
-
-The `cat.schema` file resides in a `schemas` folder in the `cats` directory, where the `CatsModule` is also defined. While you can store schema files wherever you prefer, we recommend storing them near their related **domain** objects, in the appropriate module directory.
-
-Let's look at the `CatsModule`:
-
-```typescript
-
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { CatsController } from './cats.controller.js';
-import { CatsService } from './cats.service.js';
-import { Cat, CatSchema } from './schemas/cat.schema.js';
-
-@Module({
-  imports: [MongooseModule.forFeature([{ name: Cat.name, schema: CatSchema }])],
-  controllers: [CatsController],
-  providers: [CatsService],
-})
-export class CatsModule {}
-```
-
-The `MongooseModule` provides the `forFeature()` method to configure the module, including defining which models should be registered in the current scope. To use the models in another module as well, add `MongooseModule` to the `exports` array of `CatsModule` and import `CatsModule` in the other module.
-
-Once you've registered the schema, you can inject a `Cat` model into the `CatsService` using the `@InjectModel()` decorator:
-
-```typescript
-
-import { Model } from 'mongoose';
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Cat } from './schemas/cat.schema.js';
-import { CreateCatDto } from './dto/create-cat.dto.js';
-
-@Injectable()
-export class CatsService {
-  constructor(@InjectModel(Cat.name) private catModel: Model<Cat>) {}
-
-  async create(createCatDto: CreateCatDto): Promise<Cat> {
-    const createdCat = new this.catModel(createCatDto);
-    return createdCat.save();
-  }
-
-  async findAll(): Promise<Cat[]> {
-    return this.catModel.find().exec();
-  }
-}
-```
-
-#### Connection
-
-At times, you may need to access the native [Mongoose Connection](https://mongoosejs.com/docs/api.html#Connection) object, for example, to make native API calls on it. Inject the Mongoose connection with the `@InjectConnection()` decorator as follows:
-
-```typescript
-import { Injectable } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
-
-@Injectable()
-export class CatsService {
-  constructor(@InjectConnection() private connection: Connection) {}
-}
-```
-
-#### Sessions
-
-To start a session with Mongoose, inject the database connection using `@InjectConnection()` rather than calling `mongoose.startSession()` directly. This integrates with the Nest dependency injection system and ensures the session is started on the connection that Nest manages.
-
-Here's an example of how to start a session:
-
-```typescript
-import { Injectable } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
-
-@Injectable()
-export class CatsService {
-  constructor(@InjectConnection() private readonly connection: Connection) {}
-
-  async startTransaction() {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-    // Your transaction logic here
-  }
-}
-```
-
-In this example, `@InjectConnection()` injects the Mongoose connection into the service. You can then call `connection.startSession()` to begin a new session and use it to manage database transactions, ensuring atomic operations across multiple queries. After starting the transaction, remember to commit or abort it based on your logic, and end the session when you're done.
-
-#### Multiple databases
-
-Some projects require multiple database connections, which this module also supports. To work with multiple connections, first create the connections. In this case, naming the connections is **mandatory**.
-
-```typescript
-
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-
-@Module({
-  imports: [
-    MongooseModule.forRoot('mongodb://localhost/test', {
-      connectionName: 'cats',
-    }),
-    MongooseModule.forRoot('mongodb://localhost/users', {
-      connectionName: 'users',
-    }),
-  ],
-})
-export class AppModule {}
-```
-
-> warning **Notice** Don't create multiple connections without a name or with the same name, otherwise they will override each other.
-
-With this setup, you have to tell the `MongooseModule.forFeature()` method which connection to use:
-
-```typescript
-@Module({
-  imports: [
-    MongooseModule.forFeature([{ name: Cat.name, schema: CatSchema }], 'cats'),
-  ],
-})
-export class CatsModule {}
-```
-
-You can also inject the `Connection` object for a given connection:
-
-```typescript
-import { Injectable } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
-
-@Injectable()
-export class CatsService {
-  constructor(@InjectConnection('cats') private connection: Connection) {}
-}
-```
-
-To inject a given `Connection` into a custom provider (for example, a factory provider), use the `getConnectionToken()` function, passing the name of the connection as an argument:
-
-```typescript
-{
-  provide: CatsService,
-  useFactory: (catsConnection: Connection) => {
-    return new CatsService(catsConnection);
-  },
-  inject: [getConnectionToken('cats')],
-}
-```
-
-To inject a model from a named connection, pass the connection name as the second argument to the `@InjectModel()` decorator:
-
-```typescript
-
-@Injectable()
-export class CatsService {
-  constructor(@InjectModel(Cat.name, 'cats') private catModel: Model<Cat>) {}
-}
-```
-
-#### Hooks (middleware)
-
-Middleware (also called pre and post hooks) are functions that are passed control during the execution of asynchronous functions. Middleware is specified at the schema level and is useful for writing plugins (see the [Mongoose middleware documentation](https://mongoosejs.com/docs/middleware.html)). Calling `pre()` or `post()` after compiling a model does not work in Mongoose. To register a hook **before** model registration, use the `forFeatureAsync()` method of the `MongooseModule` along with a factory provider (i.e., `useFactory`). With this technique, you can access a schema object, then use its `pre()` or `post()` method to register a hook on that schema. For example:
-
-```typescript
-@Module({
-  imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: Cat.name,
-        useFactory: () => {
-          const schema = CatSchema;
-          schema.pre('save', function () {
-            console.log('Hello from pre save');
-          });
-          return schema;
-        },
-      },
-    ]),
-  ],
-})
-export class AppModule {}
-```
-
-Like other [factory providers](/fundamentals/custom-providers#factory-providers-usefactory), the factory function can be `async` and can inject dependencies through `inject`.
-
-```typescript
-@Module({
-  imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: Cat.name,
-        imports: [ConfigModule],
-        useFactory: (configService: ConfigService) => {
-          const schema = CatSchema;
-          schema.pre('save', function() {
-            console.log(
-              `${configService.get('APP_NAME')}: Hello from pre save`,
-            );
-          });
-          return schema;
-        },
-        inject: [ConfigService],
-      },
-    ]),
-  ],
-})
-export class AppModule {}
-```
-
-#### Plugins
-
-To register a [plugin](https://mongoosejs.com/docs/plugins.html) for a given schema, use the `forFeatureAsync()` method:
-
-```typescript
-import autopopulate from 'mongoose-autopopulate';
-
-@Module({
-  imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: Cat.name,
-        useFactory: () => {
-          const schema = CatSchema;
-          schema.plugin(autopopulate);
-          return schema;
-        },
-      },
-    ]),
-  ],
-})
-export class AppModule {}
-```
-
-To register a plugin for all schemas at once, call the `.plugin()` method of the `Connection` object. You must access the connection before models are created; to do this, use the `connectionFactory` option:
-
-```typescript
-
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import autopopulate from 'mongoose-autopopulate';
-
-@Module({
-  imports: [
-    MongooseModule.forRoot('mongodb://localhost/test', {
-      connectionFactory: (connection) => {
-        connection.plugin(autopopulate);
-        return connection;
-      }
-    }),
-  ],
-})
-export class AppModule {}
-```
-
-#### Discriminators
-
-[Discriminators](https://mongoosejs.com/docs/discriminators.html) are a schema inheritance mechanism. They enable you to have multiple models with overlapping schemas on top of the same underlying MongoDB collection.
-
-Suppose you want to track different types of events in a single collection. Every event has a timestamp.
-
-```typescript
-
-@Schema({ discriminatorKey: 'kind' })
-export class Event {
-  @Prop({
-    type: String,
-    required: true,
-    enum: [ClickedLinkEvent.name, SignUpEvent.name],
-  })
-  kind: string;
-
-  @Prop({ type: Date, required: true })
-  time: Date;
-}
-
-export const EventSchema = SchemaFactory.createForClass(Event);
-```
-
-> info **Hint** Mongoose tells discriminator models apart by the "discriminator key", which is `__t` by default. Mongoose adds a String path called `__t` to your schemas and uses it to track which discriminator a document is an instance of.
-> You may also use the `discriminatorKey` option to define the path for discrimination.
-
-`SignUpEvent` and `ClickedLinkEvent` instances will be stored in the same collection as generic events.
-
-Now, let's define the `ClickedLinkEvent` class, as follows:
-
-```typescript
-
-@Schema()
-export class ClickedLinkEvent {
-  kind: string;
-  time: Date;
-
-  @Prop({ type: String, required: true })
-  url: string;
-}
-
-export const ClickedLinkEventSchema = SchemaFactory.createForClass(ClickedLinkEvent);
-```
-
-And `SignUpEvent` class:
-
-```typescript
-
-@Schema()
-export class SignUpEvent {
-  kind: string;
-  time: Date;
-
-  @Prop({ type: String, required: true })
-  user: string;
-}
-
-export const SignUpEventSchema = SchemaFactory.createForClass(SignUpEvent);
-```
-
-With this in place, use the `discriminators` option to register discriminators for a given schema. It works with both `MongooseModule.forFeature()` and `MongooseModule.forFeatureAsync()`:
-
-```typescript
-
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-
-@Module({
-  imports: [
-    MongooseModule.forFeature([
-      {
-        name: Event.name,
-        schema: EventSchema,
-        discriminators: [
-          { name: ClickedLinkEvent.name, schema: ClickedLinkEventSchema },
-          { name: SignUpEvent.name, schema: SignUpEventSchema },
-        ],
-      },
-    ]),
-  ]
-})
-export class EventsModule {}
-```
-
-#### Testing
-
-When unit testing an application, you usually want to avoid any database connection, which keeps test suites simpler to set up and faster to execute. However, your classes might depend on models that are pulled from the connection instance. To resolve these classes, create mock models.
-
-To make this easier, the `@nestjs/mongoose` package exposes a `getModelToken()` function that returns a prepared [injection token](/fundamentals/custom-providers#di-fundamentals) based on a model name. Using this token, you can provide a mock implementation using any of the standard [custom provider](/fundamentals/custom-providers) techniques, including `useClass`, `useValue`, and `useFactory`. For example:
-
-```typescript
-@Module({
-  providers: [
-    CatsService,
-    {
-      provide: getModelToken(Cat.name),
-      useValue: catModel,
-    },
-  ],
-})
-export class CatsModule {}
-```
-
-In this example, a hardcoded `catModel` (object instance) is provided whenever any consumer injects a `Model<Cat>` using the `@InjectModel()` decorator.
-
-#### Async configuration
-
-When you need to pass module options asynchronously instead of statically, use the `forRootAsync()` method. As with most dynamic modules, Nest provides several techniques for async configuration.
-
-One technique is to use a factory function:
-
-```typescript
-MongooseModule.forRootAsync({
-  useFactory: () => ({
-    uri: 'mongodb://localhost/nest',
-  }),
-});
-```
-
-Like other [factory providers](/fundamentals/custom-providers#factory-providers-usefactory), the factory function can be `async` and can inject dependencies through `inject`.
-
-```typescript
-MongooseModule.forRootAsync({
-  imports: [ConfigModule],
-  useFactory: async (configService: ConfigService) => ({
-    uri: configService.get<string>('MONGODB_URI'),
-  }),
-  inject: [ConfigService],
-});
-```
-
-Alternatively, you can configure the `MongooseModule` using a class instead of a factory, as shown below:
-
-```typescript
-MongooseModule.forRootAsync({
-  useClass: MongooseConfigService,
-});
-```
-
-The construction above instantiates `MongooseConfigService` inside `MongooseModule`, using it to create the required options object. In this example, the `MongooseConfigService` has to implement the `MongooseOptionsFactory` interface, as shown below. The `MongooseModule` calls the `createMongooseOptions()` method on the instantiated object of the supplied class.
-
-```typescript
-@Injectable()
-export class MongooseConfigService implements MongooseOptionsFactory {
-  createMongooseOptions(): MongooseModuleOptions {
-    return {
-      uri: 'mongodb://localhost/nest',
-    };
-  }
-}
-```
-
-To reuse an existing options provider instead of creating a private copy inside the `MongooseModule`, use the `useExisting` syntax. The provider must implement the `MongooseOptionsFactory` interface:
-
-```typescript
-MongooseModule.forRootAsync({
-  imports: [ConfigModule],
-  useExisting: ConfigService,
-});
-```
-
-#### Connection events
-
-You can listen to Mongoose [connection events](https://mongoosejs.com/docs/connections.html#connection-events) using the `onConnectionCreate` configuration option. Nest calls this function with each connection as soon as the connection is created, before it opens, so you can register listeners for the `connected`, `open`, `disconnected`, `reconnected`, and `disconnecting` events, as demonstrated below:
-
-```typescript
-MongooseModule.forRoot('mongodb://localhost/test', {
-  onConnectionCreate: (connection: Connection) => {
-    connection.on('connected', () => console.log('connected'));
-    connection.on('open', () => console.log('open'));
-    connection.on('disconnected', () => console.log('disconnected'));
-    connection.on('reconnected', () => console.log('reconnected'));
-    connection.on('disconnecting', () => console.log('disconnecting'));
-
-    return connection;
-  },
-}),
-```
-
-This code snippet establishes a connection to a MongoDB database at `mongodb://localhost/test`. The `onConnectionCreate` option sets up event listeners for monitoring the connection's status:
-
-- `connected`: Triggered when the connection is successfully established.
-- `open`: Fires when the connection is fully opened and ready for operations.
-- `disconnected`: Called when the connection is lost.
-- `reconnected`: Invoked when the connection is re-established after being disconnected.
-- `disconnecting`: Occurs when the connection is in the process of closing.
-
-You can also use the `onConnectionCreate` property in async configurations created with `MongooseModule.forRootAsync()`:
-
-```typescript
-MongooseModule.forRootAsync({
-  useFactory: () => ({
-    uri: 'mongodb://localhost/test',
-    onConnectionCreate: (connection: Connection) => {
-      // Register event listeners here
-      return connection;
-    },
-  }),
-}),
-```
-
-#### Subdocuments
-
-To nest subdocuments within a parent document, define your schemas as follows:
-
-```typescript
-
-@Schema()
-export class Name {
-  @Prop()
-  firstName: string;
-
-  @Prop()
-  lastName: string;
-}
-
-export const NameSchema = SchemaFactory.createForClass(Name);
-```
-
-And then reference the subdocument in the parent schema:
-
-```typescript
-
-@Schema()
-export class Person {
-  @Prop(NameSchema)
-  name: Name;
-}
-
-export const PersonSchema = SchemaFactory.createForClass(Person);
-
-export type PersonDocumentOverride = {
-  name: Types.Subdocument<Types.ObjectId> & Name;
-};
-
-export type PersonDocument = HydratedDocument<Person, PersonDocumentOverride>;
-```
-
-To include multiple subdocuments, use an array of subdocuments. Make sure to override the type of the property accordingly:
-
-```typescript
-
-@Schema()
-export class Person {
-  @Prop([NameSchema])
-  name: Name[];
-}
-
-export const PersonSchema = SchemaFactory.createForClass(Person);
-
-export type PersonDocumentOverride = {
-  name: Types.DocumentArray<Name>;
-};
-
-export type PersonDocument = HydratedDocument<Person, PersonDocumentOverride>;
-```
-
-#### Virtuals
-
-In Mongoose, a **virtual** is a property that exists on a document but is not persisted to MongoDB. Instead, it is computed dynamically whenever it's accessed. Virtuals are typically used for derived or computed values, like combining fields (e.g., creating a `fullName` property by concatenating `firstName` and `lastName`), or for creating properties that rely on existing data in the document.
-
-```ts
-class Person {
-  @Prop()
-  firstName: string;
-
-  @Prop()
-  lastName: string;
-
-  @Virtual({
-    get: function (this: Person) {
-      return `${this.firstName} ${this.lastName}`;
-    },
-  })
-  fullName: string;
-}
-```
-
-> info **Hint** The `@Virtual()` decorator is imported from the `@nestjs/mongoose` package.
-
-In this example, the `fullName` virtual is derived from `firstName` and `lastName`. Even though it behaves like a normal property when accessed, it's never saved to the MongoDB document.
-
-#### Example
-
-A working example is available in the [nestjs/nest repository](https://github.com/nestjs/nest/tree/master/sample/06-mongoose).
+For endpoint or authentication changes, also run `npm run test:e2e`.
+
+## Deployment checklist
+
+- Set `NODE_ENV=production`.
+- Use a managed MongoDB URI with TLS and appropriate network restrictions.
+- Replace all development JWT and bootstrap credentials with long random secrets.
+- Set `CORS_ORIGIN` to the deployed frontend origin instead of localhost.
+- Confirm the MongoDB deployment supports the consistency guarantees required by the circulation/payment workflows.
+- Build with `npm run build` and start with `npm run start:prod`.
+- Configure process supervision, structured logs, backups, and health monitoring outside the application.
+- Do not commit `.env`, access tokens, refresh tokens, or generated database exports.
