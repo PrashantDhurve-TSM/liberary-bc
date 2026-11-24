@@ -1,0 +1,21 @@
+export default ()=>({
+  
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT:process.env.PORT,
+  MONGO_URL:process.env.MONGO_URI,
+  CORS_ORIGIN:process.env.CORS_ORIGIN,
+  
+  JWT_ACCESS_SECRET:process.env.JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET:process.env.JWT_REFRESH_SECRET,
+  JWT_ACCESS_EXPIRES:process.env.JWT_ACCESS_EXPIRES,
+  JWT_REFRESH_EXPIRES:process.env.JWT_REFRESH_EXPIRES,
+  
+  COOKIE_SAMESITE:process.env.COOKIE_SAMESITE,
+  
+  
+  ADMIN_EMAIL:process.env.ADMIN_EMAIL,
+  ADMIN_PASSWORD:process.env.ADMIN_PASSWORD,
+  
+  LIBRARIAN_EMAIL:process.env.LIBRARIAN_EMAIL,
+  LIBRARIAN_PASSWORD:process.env.LIBRARIAN_PASSWORD,
+})
